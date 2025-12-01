@@ -14,30 +14,52 @@
    <string>RLC Cut Out Gui</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QGridLayout" name="gridLayout">
-    <property name="spacing">
-     <number>0</number>
+   <widget class="QSplitter" name="splitter">
+    <property name="geometry">
+     <rect>
+      <x>1</x>
+      <y>1</y>
+      <width>512</width>
+      <height>192</height>
+     </rect>
     </property>
-    <item row="0" column="0">
-     <widget class="QPlainTextEdit" name="plainTextEditViewCurrentFile">
-      <property name="sizePolicy">
-       <sizepolicy hsizetype="Fixed" vsizetype="Expanding">
-        <horstretch>0</horstretch>
-        <verstretch>0</verstretch>
-       </sizepolicy>
+    <property name="sizePolicy">
+     <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+      <horstretch>0</horstretch>
+      <verstretch>0</verstretch>
+     </sizepolicy>
+    </property>
+    <property name="orientation">
+     <enum>Qt::Orientation::Horizontal</enum>
+    </property>
+    <widget class="QPlainTextEdit" name="plainTextEditViewCurrentFile">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QPlainTextEdit {
+    background-color: white;
+}
+QPlainTextEdit QScrollBar {
+    background: none;
+}
+        </string>
+     </property>
+     <property name="lineWrapMode">
+      <enum>QPlainTextEdit::LineWrapMode::NoWrap</enum>
+     </property>
+    </widget>
+    <widget class="QTreeWidget" name="treeWidgetFileList">
+     <column>
+      <property name="text">
+       <string notr="true">1</string>
       </property>
-     </widget>
-    </item>
-    <item row="0" column="1">
-     <widget class="QTreeWidget" name="treeWidgetFileList">
-      <column>
-       <property name="text">
-        <string notr="true">1</string>
-       </property>
-      </column>
-     </widget>
-    </item>
-   </layout>
+     </column>
+    </widget>
+   </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">

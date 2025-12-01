@@ -33,14 +33,14 @@ let
     ps.gymnasium
     # Add pillow for runtime image utils (e.g., if dqn.py or other code needs PIL)
     ps.pillow
+    ps.tinygrad
+    ps.openai
   ]);
 
 in pkgs.mkShell {
   packages = [
     # The consolidated Python environment
     myPythonEnv
-    pkgs.python312Packages.tinygrad
-
     # System Libraries for Vulkan (Required for the backend to find drivers)
     pkgs.vulkan-loader
     pkgs.vulkan-headers
