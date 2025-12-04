@@ -22,10 +22,38 @@
 # DEALINGS IN THE SOFTWARE.
 #
 ######################################################################
+
+
 import argparse
 import os
 import json
 import re
+import fnmatch
+
+def load_ignore_patterns(dir_path: str):
+    cfg_file = os.path.join(dir_path, "cog_cfg.json")
+    patterns = []
+    if os.path.isfile(cfg_file):
+        try:
+            with open(cfg_file, "r", encoding="utf-8") as f:
+                cfg = json.load(f)
+            gignore_str = cfg.get("projectConfig", {}).get("gignore", "")
+            if isinstance(gignore_str, str):
+                # split on newlines, strip whitespace
+                patterns = [p.strip() for p in gignore_str.splitlines() if p.strip()]
+        except Exception:
+            pass
+    return patterns
+
+def should_ignore(name: str, full_path: str, patterns: list) -> bool:
+    for pat in patterns:
+        # directory ignore (like ".git/")
+        if pat.endswith("/") and name == pat.rstrip("/"):
+            return True
+        # glob-style ignore
+        if fnmatch.fnmatch(name, pat) or fnmatch.fnmatch(full_path, pat):
+            return True
+    return False
 
 def dir2tree_data(dir_path: str) -> dict:
     forbidden_pattern = re.compile(r'[<>:"|?*\x00]')
@@ -40,9 +68,12 @@ def dir2tree_data(dir_path: str) -> dict:
             "path_exists": os.path.isdir(dir_path)
         }
 
+    ignore_patterns = load_ignore_patterns(dir_path)
+
     def build_tree(path: str) -> dict:
+        name = os.path.basename(path) or path
         node = {
-            "name": os.path.basename(path) or path,
+            "name": name,
             "is_dir": os.path.isdir(path),
             "children": []
         }
@@ -50,24 +81,73 @@ def dir2tree_data(dir_path: str) -> dict:
             try:
                 for entry in os.listdir(path):
                     full_path = os.path.join(path, entry)
+                    if should_ignore(entry, full_path, ignore_patterns):
+                        continue
                     node["children"].append(build_tree(full_path))
             except PermissionError:
-                pass  # skip inaccessible directories
+                pass
         return node
 
-    tree = build_tree(dir_path)
-    tree["is_valid_path"] = True
-    tree["path_exists"] = True
-    return tree
+    file_tree = build_tree(dir_path)
+    file_tree["is_valid_path"] = True
+    file_tree["path_exists"] = True
+    return file_tree
+
+def ftree2bashtree(ftree):
+    """
+    Convert a file tree dict into a bash-style tree output string.
+    """
+    def recurse(node, prefix="", last=True):
+        lines = []
+        connector = "└── " if last else "├── "
+        lines.append(prefix + connector + node["name"])
+        if node.get("is_dir", False):
+            children = sorted(node["children"], key=lambda x: x["name"])
+            for i, child in enumerate(children):
+                is_last = i == len(children) - 1
+                new_prefix = prefix + ("    " if last else "│   ")
+                lines.extend(recurse(child, new_prefix, is_last))
+        return lines
+
+    lines = ["."]
+    if ftree.get("is_dir", False):
+        children = sorted(ftree["children"], key=lambda x: x["name"])
+        for i, child in enumerate(children):
+            is_last = i == len(children) - 1
+            lines.extend(recurse(child, "", is_last))
+    return "\n".join(lines)
+
+def ftree2sums(ftree, parent_path=""):
+    """
+    Convert a file tree dict into a flat list of file entries.
+    Only includes files, not directories.
+    """
+    files = []
+    current_path = os.path.join(parent_path, ftree["name"])
+    if ftree.get("is_dir", False):
+        for child in ftree.get("children", []):
+            files.extend(ftree2sums(child, current_path))
+    else:
+        rel_path = os.path.normpath(current_path)
+        if not rel_path.startswith("./"):
+            rel_path = "./" + rel_path.lstrip("./")
+        files.append({
+            "name": rel_path,
+            "sum": False,
+            "time": False
+        })
+    return files
 
 def main():
-    import argparse
     parser = argparse.ArgumentParser(description="Generate JSON tree of a directory.")
     parser.add_argument("directory", help="Path to the directory")
     args = parser.parse_args()
 
-    tree = dir2tree_data(args.directory)
-    print(json.dumps(tree, indent=2))
+    ftree = dir2tree_data(args.directory)
+    # print(json.dumps(ftree, indent=2))
+    flist = ftree2sums(ftree)
+    print(json.dumps(flist, indent=2))
+    print(ftree2bashtree(ftree))
 
 if __name__ == "__main__":
     main()
