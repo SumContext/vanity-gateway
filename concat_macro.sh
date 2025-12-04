@@ -79,9 +79,10 @@ cd "$owd"
 
 # Example call: run test.sh inside nix-shell, log to test_output.log
 # run_and_log "$owd/test.sh" "$owd/test_output.log" "$owd/devShells.nix"
-run_and_log "$owd/RLC_COG.sh" "$owd/test_output.log" "$owd/devShells.nix"
+# run_and_log "$owd/RLC_COG.sh" "$owd/test_output.log" "$owd/devShells.nix"
+run_and_log "$owd/dir_sum.sh" "$owd/test_output.log" "$owd/devShells.nix"
 
-combine_files concat.md ./RLC_COG.py ./RLC_COG.ui ./test_output.log
+combine_files concat.md ./dir_sum2json.md ./dir_sum2json.py ./cog_cfg.json ./test_output.log
 # combine_files concat.md ./devShells.nix ./RLC_COG.py ./RLC_COG.ui ./test_output.log
 
 exit

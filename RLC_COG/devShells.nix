@@ -35,6 +35,7 @@ let
     ps.pillow
     ps.tinygrad
     ps.openai
+    ps.pydantic
   ]);
 
 in pkgs.mkShell {
