@@ -289,22 +289,23 @@ def flistwithsums(flist, dir_path: str):
             if (cached_entry.get("time") and
                 cached_entry["time"] >= mtime and
                 not cached_entry.get("error", False)):
-               
+                
                 # cached summary is newer and valid
                 entry["sum"] = cached_entry["sum"]
                 entry["time"] = cached_entry["time"]
                 entry["error"] = cached_entry.get("error", False)
                 use_cached = True
+        
         if not use_cached:
             summary, is_error = file2sum(full_path)
-            # New check: if summary length > 24, mark as error
-            if not is_error and len(summary) > 24:
-                entry["sum"] = f"Error: summary too long ({len(summary)} chars)"
+            # Check if summary is less than 24 chars. 
+            # If so, keep the summary text but mark error as True.
+            if not is_error and len(summary) < 24:
+                entry["sum"] = summary
                 entry["error"] = True
             else:
                 entry["sum"] = summary
                 entry["error"] = is_error
-            # MODIFIED: Explicit UTC timestamp
             entry["time"] = int(datetime.now(timezone.utc).timestamp())
         updated.append(entry)
     # Save updated list back to tree.sums.json
