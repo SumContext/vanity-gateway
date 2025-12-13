@@ -292,8 +292,13 @@ def flistwithsums(flist, dir_path: str):
                 use_cached = True
         if not use_cached:
             summary, is_error = file2sum(full_path)
-            entry["sum"] = summary
-            entry["error"] = is_error
+            # New check: if summary length > 24, mark as error
+            if not is_error and len(summary) > 24:
+                entry["sum"] = f"Error: summary too long ({len(summary)} chars)"
+                entry["error"] = True
+            else:
+                entry["sum"] = summary
+                entry["error"] = is_error
             # MODIFIED: Explicit UTC timestamp
             entry["time"] = int(datetime.now(timezone.utc).timestamp())
         updated.append(entry)
