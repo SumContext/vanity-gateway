@@ -91,35 +91,46 @@ def main():
 def file2sum(file_path):
     # 1. Validate Input
     if not os.path.exists(file_path):
-        return f"Error: File {file_path} not found.", True # <--- CHANGED (Added True)
+        return f"Error: File {file_path} not found.", True
+
     # 2. Load File Content
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
             code_content = f.read()
     except Exception as e:
-        return f"Error reading file: {str(e)}", True # <--- CHANGED (Added True)
-    # 3. Load Config (for Model Name)
-    # We look for cog_cfg.json in the same directory as the script
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    cfg_path = os.path.join(script_dir, "cog_cfg.json")
-    model_name = "openai/gpt-oss-20b:free" # Default fallback
-   
-    if os.path.exists(cfg_path):
-        try:
-            with open(cfg_path, 'r') as f:
-                cfg = json.load(f)
-                # navigate: projectConfig -> JuniorLLM
-                model_name = cfg.get("projectConfig", {}).get("JuniorLLM", model_name)
-        except:
-            pass # keep default if config fails
-    # 4. Prepare API Call
-    requests_API_URL = "https://openrouter.ai/api/v1/chat/completions"
+        return f"Error reading file: {str(e)}", True
+
+    # 3. Load Config (model, API_URL, maxSupportedFileSize)
+    model_name = ""
+    api_url = ""
+    max_size = 0
+
+    try:
+        with open(cog_cfg, "r") as f:
+            cfg = json.load(f)
+            project = cfg.get("projectConfig", {})
+            model_name = project.get("JuniorLLM", "")
+            api_url = project.get("API_URL", "")
+            max_size = project.get("maxSupportedFileSize", 0)
+    except Exception:
+        raise RuntimeError("fix your ~/.config/sumtree/cog_cfg.json")
+
+    if not model_name or not api_url:
+        raise RuntimeError("fix your ~/.config/sumtree/cog_cfg.json")
+
+    # 4. Skip files larger than maxSupportedFileSize
+    if max_size and os.path.getsize(file_path) > max_size:
+        return "(skipped: file too large)", True
+
+    # 5. Prepare API Call
+    requests_API_URL = api_url
     headers = {
         "Authorization": f"Bearer {secret_k}",
         "Content-Type": "application/json"
     }
-    # We ask the model to include reasoning and keep it short
+
     prompt = "Provide a markdown code escaped 111 chars or less summary of this file."
+
     payload = {
         "model": model_name,
         "include_reasoning": True, # Required for some models to output the 'reasoning' field
@@ -140,26 +151,23 @@ def file2sum(file_path):
             {"role": "user", "content": f"File: {os.path.basename(file_path)}\n\nContent:\n{code_content}\n\n{prompt}"}
         ]
     }
-    # 5. Execute Request
+
+    # 6. Execute Request
     try:
         response = requests.post(requests_API_URL, headers=headers, json=payload)
         response.raise_for_status()
         data = response.json()
     except Exception as e:
-        return f"API Error: {str(e)}", True # <--- CHANGED (Added True)
-    # 6. Parse and Format Output
+        return f"API Error: {str(e)}", True
+
+    # 7. Parse and Format Output
     try:
-        # Extract the assistant's message
         message = data['choices'][0]['message']
         content = message.get('content', '').strip()
-        # Trim markdown fences if present
+
         if content.startswith("```") and content.endswith("```"):
             lines = content.splitlines()
-            if len(lines) >= 2:
-                content = "\n".join(lines[1:-1]).strip()
-        return content, False # <--- CHANGED (Added False)
-    except (KeyError, IndexError) as e:
-        return f"Error parsing JSON response: {str(e)}", True # <--- CHANGED (Added True)
+            if len(lines) >=
 
 def load_ignore_patterns(dir_path: str):
     global cog_cfg  # <--- CRITICAL FIX: Access the global path resolved in main()
