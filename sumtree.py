@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # coding=utf-8
+# Copyright (C) 2023-2026 Roy Pfund. All rights reserved.
 #
 # Permission is  hereby  granted,  free  of  charge,  to  any  person
 # obtaining a copy of  this  software  and  associated  documentation
@@ -25,7 +26,7 @@
 
 from datetime import datetime, timezone
 import pathspec
-import subprocess, threading, re, os, sys, inspect, shutil, argparse, random, math, json, fnmatch, requests
+import subprocess, threading, re, os, sys, inspect, shutil, argparse, random, math, json, fnmatch, requests, json, types, smart_open
 rows, columns = os.popen('stty size', 'r').read().split() #http://goo.gl/cD4CFf
 #"pydoc -p 1234" will start a HTTP server on port 1234, allowing you to browse
 #the documentation at "http://localhost:1234/" in your preferred Web browser.
@@ -75,65 +76,87 @@ def main():
     flist = flistwithsums(ftree2sums(dir2tree_data(script_dir)), args.directory)
     print(ftree2bashsumtree(script_dir))
 
-    # ftree = dir2tree_data(script_dir)
-    # # print(json.dumps(ftree, indent=2))
-    # flist = ftree2sums(ftree)
-    # # print(ftree2bashtree(ftree))
-    # 
-    # # readm = os.path.join(script_dir, "readme.md")
-    # # print(file2sum(readm))
-    # # file2sum tested working
-    # 
-    # # # enrich with summaries (using cache if available)
-    # flist = flistwithsums(flist, args.directory)
-    # # print(json.dumps(flist, indent=2))
+def get_response(payload_builder, *builder_args):
+    """
+    Orchestrates config loading, payload building, and API calls.
+    No awareness of builder_args
+    """
+    try:
+        # Load Config
+        with open(cog_cfg, "r", encoding="utf-8") as f:
+            cfg = json.load(f, object_hook=lambda d: types.SimpleNamespace(**d))
 
-def file2sum(file_path):
-    # 1. Validate Input
+        if not cfg.projectConfig.JuniorLLM or not cfg.projectConfig.API_URL:
+            return "Configuration Error: Missing API_URL or Model name.", True
+
+        # Build payload (builder handles file I/O + validation)
+        payload, err = payload_builder(cfg.projectConfig.JuniorLLM, *builder_args)
+        if err:
+            return payload, True
+
+        # API Request
+        headers = {
+            "Authorization": f"Bearer {secret_k}",
+            "Content-Type": "application/json"
+        }
+
+        response = requests.post(cfg.projectConfig.API_URL, headers=headers, json=payload, timeout=30)
+        response.raise_for_status()
+        return response.json(), False
+
+    except FileNotFoundError:
+        return f"Config file {cog_cfg} not found.", True
+    except requests.exceptions.RequestException as e:
+        return f"Network/API Error: {str(e)}", True
+    except Exception as e:
+        return f"Unexpected Error: {str(e)}", True
+
+# def Load_Plaintxt(file_path):
+#     if not os.path.exists(file_path):
+#         return None, f"Error: File {file_path} not found.", True
+#     try:
+#         with smart_open.open(file_path, "r", encoding="utf-8") as f:
+#             content = f.read()
+#         return content, None, False
+#     except Exception as e:
+#         return None, f"Error reading file: {str(e)}", True
+
+def Load_Plaintxt(file_path):
+    """Utility to read file content safely."""
     if not os.path.exists(file_path):
         return f"Error: File {file_path} not found.", True
-
-    # 2. Load File Content
     try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            code_content = f.read()
+        with open(file_path, "r", encoding="utf-8") as f:
+            return f.read(), False
     except Exception as e:
         return f"Error reading file: {str(e)}", True
 
-    # 3. Load Config (model, API_URL, maxSupportedFileSize)
-    model_name = ""
-    api_url = ""
-    max_size = 0
-
+def load_sum(model_name, file_path, *builder_args):
+    """
+    Builds the LLM payload.
+    Now responsible for file size validation and loading.
+    Returns (payload, is_error).
+    """
+    # 1. File size validation
     try:
-        with open(cog_cfg, "r") as f:
-            cfg = json.load(f)
-            project = cfg.get("projectConfig", {})
-            model_name = project.get("JuniorLLM", "")
-            api_url = project.get("API_URL", "")
-            max_size = project.get("maxSupportedFileSize", 0)
-    except Exception:
-        raise RuntimeError("fix your ~/.config/sumtree/cog_cfg.json")
+        if os.path.getsize(file_path) > 500_000:  # or cfg.projectConfig.maxSupportedFileSize
+            return "(skipped: file too large)", True
+    except Exception as e:
+        return f"File size check failed: {str(e)}", True
 
-    if not model_name or not api_url:
-        raise RuntimeError("fix your ~/.config/sumtree/cog_cfg.json")
+    # 2. Load file content
+    code_content, err = Load_Plaintxt(file_path)
+    if err:
+        return code_content, True
 
-    # 4. Skip files larger than maxSupportedFileSize
-    if max_size and os.path.getsize(file_path) > max_size:
-        return "(skipped: file too large)", True
-
-    # 5. Prepare API Call
-    requests_API_URL = api_url
-    headers = {
-        "Authorization": f"Bearer {secret_k}",
-        "Content-Type": "application/json"
-    }
+    # 3. Extra context
+    extra_context = builder_args[0] if builder_args else "large project"
 
     prompt = "Provide a markdown code escaped 111 chars or less summary of this file."
 
     payload = {
         "model": model_name,
-        "include_reasoning": True, # Required for some models to output the 'reasoning' field
+        "include_reasoning": True,
         "messages": [
           {
             "role": "system",
@@ -148,30 +171,29 @@ def file2sum(file_path):
             "content": "```C program to calculate and display real or complex roots of a quadratic equation using coefficients.```",
             "reasoning": "The user requested a concise summary of a C program. The program reads coefficients of a quadratic equation, computes the determinant, and based on its value, calculates and prints either two real roots, one repeated real root, or two complex roots. The assistant generated a short summary that captures this functionality within the character limit."
           },
-            {"role": "user", "content": f"File: {os.path.basename(file_path)}\n\nContent:\n{code_content}\n\n{prompt}"}
+            {"role": "user", "content": f"{prompt}\n```\n{code_content}\n```\n"}
         ]
     }
+    return payload, False
 
-    # 6. Execute Request
-    try:
-        response = requests.post(requests_API_URL, headers=headers, json=payload)
-        response.raise_for_status()
-        data = response.json()
-    except Exception as e:
-        return f"API Error: {str(e)}", True
-
-    # 7. Parse and Format Output
+def get_sum(file_path, *builder_args):
+    data, err = get_response(load_sum, file_path, *builder_args)
+    if err:
+        # data is already an error message string
+        return data, True
+    
+    # Only try to parse JSON if there was no error
     try:
         message = data['choices'][0]['message']
         content = message.get('content', '').strip()
-
-        if content.startswith("```") and content.endswith("```"):
+        if content.startswith("```"):
             lines = content.splitlines()
             if len(lines) >= 2:
                 content = "\n".join(lines[1:-1]).strip()
-
+            else:
+                content = content.replace("```", "").strip()
         return content, False
-    except (KeyError, IndexError) as e:
+    except (KeyError, IndexError, TypeError) as e:
         return f"Error parsing JSON response: {str(e)}", True
 
 def load_ignore_patterns(dir_path: str):
@@ -311,7 +333,7 @@ def flistwithsums(flist, dir_path: str):
                 use_cached = True
 
         if not use_cached:
-            summary, is_error = file2sum(full_path)
+            summary, is_error = get_sum(full_path)
             # Check if summary is less than 24 chars. 
             # If so, keep the summary text but mark error as True.
             if not is_error and len(summary) < 24:
