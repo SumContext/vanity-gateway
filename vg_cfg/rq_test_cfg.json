@@ -1,0 +1,6 @@
+{
+  "projectConfig": {
+    "JuniorLLM": "openai/gpt-oss-20b",
+    "API_URL": "https://localhost:8443/chat/completions"
+  }
+}
