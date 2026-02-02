@@ -1,3 +1,6 @@
 concat.md
 test_output.log
+vg_cfg/test.key
+vg_cfg/server.key
+vg_cfg/server.crt
 secret.key

@@ -1,5 +1,5 @@
 {
-  description = "Development shell with custom Python environment and sumtree package";
+  description = "Development shell with custom Python environment and vanity-gateway package";
 
   inputs = {
 #     nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
@@ -19,34 +19,61 @@
 
       myPythonEnv = myPython.withPackages (ps: [
 #         ps.openai
-#         ps.pydantic
+        ps.pydantic
+        ps.jinja2
         ps.requests
         ps.pathspec
+        ps.fastapi
         ps.smart-open
+
+        ps.langchain-core
+        ps.pyutil
+        #lanchain providers
+        ps.langchain-xai
+        ps.langchain-aws
+        ps.langchain-groq
+        ps.langchain-core
+        ps.langchain-tests
+        ps.langchain-openai
+        ps.langchain-ollama
+        ps.langchain-chroma
+        ps.langchain-mongodb
+        ps.langchain-classic
+        ps.langchain-deepseek
+        ps.langchain-mistralai
+        ps.langchain-fireworks
+        ps.langchain-community
+        ps.langchain-anthropic
+        ps.langchain-perplexity
+        ps.langchain-huggingface
+        ps.langchain-google-genai
+        ps.langchain-experimental
+        ps.langchain-text-splitters
+
       ]);
 
       gitRev = self.rev or "dirty";
 
-      sumtree = pkgs.writeShellScriptBin "sumtree" ''
+      vanity-gateway = pkgs.writeShellScriptBin "vanity-gateway" ''
         export SUMTREE_GIT_REV="${gitRev}"
-        exec ${myPythonEnv}/bin/python ${self}/sumtree.py "$@"
+        exec ${myPythonEnv}/bin/python ${self}/vanity-gateway.py "$@"
       '';
     in
     {
       packages.${system} = {
-        sumtree = sumtree;
-        default = sumtree;
+        vanity-gateway = vanity-gateway;
+        default = vanity-gateway;
       };
 
       devShells.${system}.default = pkgs.mkShell {
         packages = [
           myPythonEnv
-          sumtree
+          vanity-gateway
         ];
 
         shellHook = ''
           if [[ $- == *i* ]]; then
-            export PS1="[sumtree-dev:\w] "
+            export PS1="[vanity-gateway-dev:\w] "
           fi
         '';
       };
