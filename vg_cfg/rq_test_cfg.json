@@ -1,6 +1,11 @@
 {
   "projectConfig": {
-    "JuniorLLM": "openai/gpt-oss-20b",
-    "API_URL": "https://localhost:8443/chat/completions"
+    "gateway_url": "https://localhost:8443/chat/completions",
+    "nickname": "groq-fast",
+    "parameters": {
+      "max_tokens": 40,
+      "temperature": 0.5,
+      "include_reasoning": false
+    }
   }
 }

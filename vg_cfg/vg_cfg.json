@@ -1,21 +1,16 @@
 {
-  "projectConfig": {
-    "API_URL": "https://api.groq.com/openai/v1/chat/completions",
-    "maxSupportedFileSize": 20480,
-    "JuniorLLM": "openai/gpt-oss-20b",
-    "SeniorLLM": "openai/gpt-oss-20b",
-    "supportedFileTypes": [
-      "c",
-      "py",
-      "sh",
-      "clj",
-      "js",
-      "nix",
-      "html",
-      "txt",
-      "md",
-      "cljs"
-    ],
-    "gignore": ".git/\n*.key\n.gitignore\ntree.sums.json"
+  "providers": {
+    "groq-fast": {
+      "api": "requests",
+      "url": "https://api.groq.com/openai/v1/chat/completions",
+      "key_path": "vg_cfg/Groq.key",
+      "model": "openai/gpt-oss-20b"
+    },
+    "openai-gpt4": {
+      "api": "langchain_openai",
+      "url": "https://api.openai.com/v1",
+      "key_path": "vg_cfg/openai.key",
+      "model": "gpt-4o"
+    }
   }
 }

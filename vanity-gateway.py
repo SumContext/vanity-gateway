@@ -50,6 +50,9 @@ import pkgutil, importlib
 import langchain
 import pathspec
 import subprocess, threading, re, os, sys, inspect, shutil, argparse, random, math, json, fnmatch, requests, types, smart_open
+import logging  # Added for debug logs
+
+logging.basicConfig(level=logging.INFO)
 
 # rows, columns = os.popen('stty size', 'r').read().split() #http://goo.gl/cD4CFf
 # "pydoc -p 1234" will start a HTTP server on port 1234, allowing you to browse
@@ -79,81 +82,64 @@ def load_cfg_from_path(cfg_path):
 
 @app.post("/chat/completions")
 async def chat_completions(request: fastapi.Request):
-    """
-    Validate incoming token, forward the payload to the configured provider,
-    and return the provider response back to the caller.
-    """
+    # Validate incoming authorization token
+    auth = request.headers.get("Authorization")
+    if not auth or auth != f"Bearer {TEST_KEY}":
+        raise fastapi.HTTPException(status_code=401, detail="Invalid or missing authorization token")
 
-    # Validate Authorization header
-    auth = request.headers.get("authorization", "")
-    if not auth.startswith("Bearer "):
-        raise fastapi.HTTPException(status_code=401, detail="Missing Bearer token")
+    # 1. Get routing info from URL
+    nickname = request.query_params.get("nickname")
+    if not nickname:
+        raise fastapi.HTTPException(status_code=400, detail="Missing nickname in URL")
 
-    token = auth.split(" ", 1)[1]
-    if token != TEST_KEY:
-        raise fastapi.HTTPException(status_code=401, detail="Invalid token")
+    # 2. Load Gateway Registry (vg_cfg.json)
+    gate_cfg = load_cfg_from_path(os.path.join(cwfd, "vg_cfg/vg_cfg.json"))
+    provider = getattr(gate_cfg.providers, nickname, None)
+    if not provider:
+        raise fastapi.HTTPException(status_code=404, detail=f"Provider {nickname} not found")
 
-    # Read incoming payload (we expect the client to POST the provider payload)
-    try:
+    # 3. Handle specific API types (Step 1: Requests)
+    if provider.api == "requests":
+        # Load the provider-specific key
+        with open(os.path.join(cwfd, provider.key_path), "r") as f:
+            provider_key = f.read().strip()
+
+        # 4. Prepare the forward-facing payload
         payload = await request.json()
-    except Exception as e:
-        raise fastapi.HTTPException(status_code=400, detail=f"Invalid JSON payload: {e}")
+        
+        # SURGICAL FIX: Map nickname to the provider's actual model string
+        # This replaces the local nickname with what Groq/OpenAI expects
+        payload["model"] = provider.model
 
-    # Determine config paths (reuse commented lines from req_test)
-    vg_cfg_path = os.path.join(cwfd, "vg_cfg/vg_cfg.json")
-    secretkey_path = os.path.join(cwfd, "vg_cfg/secret.key")
+        # Merge URL parameters into the JSON payload with type handling
+        for key, value in request.query_params.items():
+            if key == "nickname":
+                continue
+            
+            # Surgical fix for types: handle digits, floats, and booleans
+            if value.isdigit():
+                payload[key] = int(value)
+            elif value.replace('.', '', 1).isdigit() and '.' in value: # Handle floats
+                payload[key] = float(value)
+            elif value.lower() == "true":
+                payload[key] = True
+            elif value.lower() == "false":
+                payload[key] = False
+            else:
+                payload[key] = value
+        # LOGGING: See exactly what we are sending upstream
+        print(f"Forwarding to: {provider.url}")
+        print(f"Final Payload: {json.dumps(payload, indent=2)}")
 
-    # Load provider config and secret
-    try:
-        cfg = load_cfg_from_path(vg_cfg_path)
-    except FileNotFoundError:
-        raise fastapi.HTTPException(status_code=500, detail=f"Provider config not found at {vg_cfg_path}")
-    except Exception as e:
-        raise fastapi.HTTPException(status_code=500, detail=f"Failed to load provider config: {e}")
+        # 5. Forward to the actual provider
+        headers = {"Authorization": f"Bearer {provider_key}", "Content-Type": "application/json"}
+        resp = requests.post(provider.url, headers=headers, json=payload, timeout=30)
+        return fastapi.responses.JSONResponse(content=resp.json(), status_code=resp.status_code)
 
-    try:
-        with open(secretkey_path, "r") as f:
-            cfg.secret_k = f.read().strip()
-    except FileNotFoundError:
-        raise fastapi.HTTPException(status_code=500, detail=f"Secret key not found at {secretkey_path}")
-    except Exception as e:
-        raise fastapi.HTTPException(status_code=500, detail=f"Failed to read secret key: {e}")
-
-    # Validate minimal config fields
-    try:
-        api_url = cfg.projectConfig.API_URL
-        # If this says localhost:8443, you have a configuration loop.
-        print(f"Forwarding to: {api_url}") 
-        model_name = cfg.projectConfig.JuniorLLM if hasattr(cfg.projectConfig, "JuniorLLM") else None
-    except Exception:
-        raise fastapi.HTTPException(status_code=500, detail="Invalid provider config structure (missing projectConfig.API_URL)")
-
-    if not api_url:
-        raise fastapi.HTTPException(status_code=500, detail="Provider API_URL not configured")
-
-    # Forward the payload to the provider
-    try:
-        headers = {
-            "Authorization": f"Bearer {cfg.secret_k}",
-            "Content-Type": "application/json"
-        }
-        # Use the same verify behavior as rqs.get_response (if server cert exists)
-        verify_cert = os.path.join(cwfd, "vg_cfg/server.crt")
-        verify_flag = True 
-        resp = requests.post(api_url, headers=headers, json=payload, timeout=30, verify=verify_flag)
-        resp.raise_for_status()
-        # Return the provider response body directly
-        return fastapi.responses.JSONResponse(content=resp.json(), status_code=200)
-
-    except requests.exceptions.RequestException as e:
-        # Mirror rqs.get_response style error handling
-        detail = f"Network/API Error: {str(e)}"
-        raise fastapi.HTTPException(status_code=502, detail=detail)
-    except ValueError:
-        # JSON decode error
-        raise fastapi.HTTPException(status_code=502, detail="Provider returned non-JSON response")
-    except Exception as e:
-        raise fastapi.HTTPException(status_code=500, detail=f"Unexpected Error: {e}")
+    
+    elif provider.api == "langchain_openai":
+        # Placeholder for next iteration
+        raise fastapi.HTTPException(status_code=501, detail="Langchain API not yet implemented")
 
 if __name__ == "__main__":
     uvicorn.run(
@@ -163,4 +149,3 @@ if __name__ == "__main__":
         ssl_keyfile="vg_cfg/server.key",
         ssl_certfile="vg_cfg/server.crt",
     )
-

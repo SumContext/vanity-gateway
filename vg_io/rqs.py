@@ -37,20 +37,19 @@
 
 import json, requests, types, os
 
-def get_response(cfg, payload_builder, *builder_args, verify=True):
+def get_response(cfg, payload_builder, *builder_args, verify=True, params=None):
     """
     Use requests lib - Send Message to Server
     Orchestrates config loading, and API calls.
     Now requires cfg as first argument.
+    'params' argument to support URL encoding.
     """
     try:
-        if not cfg.projectConfig.JuniorLLM or not cfg.projectConfig.API_URL:
-            return "Configuration Error: Missing API_URL or Model name.", True
-
-        # Build payload
+        # Use gateway_url from config instead of a hardcoded API_URL
+        target_url = cfg.projectConfig.gateway_url
+        
         payload, err = payload_builder(cfg, *builder_args)
-        if err:
-            return payload, True
+        if err: return payload, True
 
         headers = {
             "Authorization": f"Bearer {cfg.secret_k}",
@@ -58,27 +57,25 @@ def get_response(cfg, payload_builder, *builder_args, verify=True):
         }
 
         response = requests.post(
-            cfg.projectConfig.API_URL,
+            target_url,
             headers=headers,
             json=payload,
+            params=params, # URL encodes nickname and parameters
             timeout=30,
             verify=verify
         )
-
         response.raise_for_status()
         return response.json(), False
-
-    except requests.exceptions.RequestException as e:
-        return f"Network/API Error: {str(e)}", True
     except Exception as e:
-        return f"Unexpected Error: {str(e)}", True
+        return f"Error: {str(e)}", True
 
-def parse_response(cfg, payload_builder, *builder_args, verify=True):
+def parse_response(cfg, payload_builder, *builder_args, verify=True, params=None):
+    data, err = get_response(cfg, payload_builder, *builder_args, verify=verify, params=params)
     """
     Use requests lib - Receive Response from server
     Now requires cfg as first argument.
     """
-    data, err = get_response(cfg, payload_builder, *builder_args, verify=verify)
+    # data, err = get_response(cfg, payload_builder, *builder_args, verify=verify)
     if err:
         return data, True
 

@@ -4,8 +4,10 @@ in one terminal we have
 ```bash
 [owner@nixos:~/sync/vanity]$ nix develop
 [vanity-gateway-dev:~/sync/vanity] ./req_test.py 
-The first President of the United States was **George Washington**.
+The first President of
 ```
+
+which uses the token limit from somewhere else ;)
 
 accessed by a proxy we created in another terminal with:
 
