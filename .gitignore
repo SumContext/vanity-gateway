@@ -1,5 +1,6 @@
 concat.md
 test_output.log
+**/*.key
 vg_cfg/test.key
 vg_cfg/server.key
 vg_cfg/server.crt
