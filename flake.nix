@@ -33,7 +33,6 @@
         ps.langchain-aws
         ps.langchain-groq
         ps.langchain-core
-        ps.langchain-tests
         ps.langchain-openai
         ps.langchain-ollama
         ps.langchain-chroma
@@ -49,6 +48,12 @@
         ps.langchain-google-genai
         ps.langchain-experimental
         ps.langchain-text-splitters
+
+        # Testing dependencies
+        ps.pytest
+        ps.pytest-cov
+        ps.pytest-asyncio
+        ps.httpx
 
       ]);
 
