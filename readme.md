@@ -66,11 +66,31 @@ aws bedrock list-inference-profiles --region us-east-1
 ## Setup
 
 ```bash
+cd ~/sync
+git clone git@github.com:SumContext/vanity-gateway.git
+cd ~/sync/vanity-gateway/
+./create_certs.sh 
+
+cd ~/sync/vanity-gateway/
 nix develop
-./create_certs.sh  # Creates SSL certs and test.key
 ./vanity-gateway.py
+INFO:     Started server process [9535]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on https://0.0.0.0:8443 (Press CTRL+C to quit)
+
 ```
 
+and in a different terminal
+
+```bash
+cd ~/sync/vanity-gateway/
+nix develop
+./ex_client.py 
+The first President of the United States was **George Washington**. He served from 1789 to 1797.
+```
+
+read [`ex_client.py`](/ex_client.py) example
 Server runs on `https://0.0.0.0:8443`
 
 ## Usage

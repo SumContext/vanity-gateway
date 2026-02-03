@@ -162,8 +162,10 @@ async def chat_completions(request: fastapi.Request):
     
     elif provider.api == "langchain_openai":
         # Load the provider-specific key
-        with open(os.path.join(cwfd, provider.key_path), "r") as f:
-            provider_key = f.read().strip()
+        provider_key = None
+        if hasattr(provider, "key_path") and provider.key_path:
+            with open(os.path.join(cwfd, provider.key_path), "r") as f:
+                provider_key = f.read().strip()
 
         # Prepare payload and merge URL params (same logic as requests branch)
         payload = await request.json()
@@ -189,7 +191,10 @@ async def chat_completions(request: fastapi.Request):
         # payload.pop("include_reasoning", None)
 
         logging.info("Forwarding to langchain_openai provider URL %s", provider.url)
-        headers = {"Authorization": f"Bearer {provider_key}", "Content-Type": "application/json"}
+        headers = {"Content-Type": "application/json"}
+        if provider_key:
+            headers["Authorization"] = f"Bearer {provider_key}"
+        # headers = {"Authorization": f"Bearer {provider_key}", "Content-Type": "application/json"}
         resp = requests.post(provider.url, headers=headers, json=payload, timeout=30)
         return fastapi.responses.JSONResponse(content=resp.json(), status_code=resp.status_code)
     

@@ -47,6 +47,19 @@ CFG_groq_gpt20b = """
     }
 }
 """
+CFG_lmstudio20b = """
+{
+    "projectConfig": {
+        "gateway_url": "https://localhost:8443/chat/completions",
+        "nickname": "lmstudio20b",
+        "parameters": {
+            "max_tokens": 400,
+            "temperature": 0.5,
+            "include_reasoning": true
+        }
+    }
+}
+"""
 
 def main():
     some_cfg_file = os.path.join(cwfd, "vg_cfg/rq_test_cfg.json")
@@ -54,7 +67,8 @@ def main():
     
     # set a cfg with load_from_file or inline_set
     # cfg = vg_io.cfg.load_from_file(some_cfg_file, some_key_path)
-    cfg = vg_io.cfg.inline_set(CFG_groq_gpt20b, some_key_path)
+    # cfg = vg_io.cfg.inline_set(CFG_groq_gpt20b, some_key_path)
+    cfg = vg_io.cfg.inline_set(CFG_lmstudio20b, some_key_path)
 
     # runs test_prompt builder
     cert = os.path.join(cwfd, "vg_cfg/server.crt")

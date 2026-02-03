@@ -24,6 +24,11 @@
       "key_path": "vg_cfg/OpenRouter.key",
       "model": "z-ai/glm-4.5-air:free"
     },
+    "lmstudio20b": {
+      "api": "langchain_openai",
+      "url": "http://localhost:1234/v1/chat/completions",
+      "model": "openai/gpt-oss-20b"
+    },
     "aws-claude-sonnet": {
       "api": "langchain_aws",
       "key_path": "vg_cfg/aws.key",
