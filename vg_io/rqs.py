@@ -37,19 +37,26 @@
 
 import json, requests, types, os
 
-def get_response(cfg, payload_builder, *builder_args, verify=True, params=None):
+# def get_response(cfg, payload_builder, *builder_args, verify=True, params=None):
+def get_response(cfg, payload_builder, *builder_args, verify=True):
     """
     Use requests lib - Send Message to Server
     Orchestrates config loading, and API calls.
     Now requires cfg as first argument.
-    'params' argument to support URL encoding.
     """
+    # Extract params
+    params = vars(cfg.projectConfig.parameters).copy()
+    params['nickname'] = cfg.projectConfig.nickname
     try:
         # Use gateway_url from config instead of a hardcoded API_URL
         target_url = cfg.projectConfig.gateway_url
         
         payload, err = payload_builder(cfg, *builder_args)
         if err: return payload, True
+
+        # Merge the extracted params into the payload
+        if params:
+            payload.update(params)
 
         headers = {
             "Authorization": f"Bearer {cfg.secret_k}",
@@ -69,8 +76,8 @@ def get_response(cfg, payload_builder, *builder_args, verify=True, params=None):
     except Exception as e:
         return f"Error: {str(e)}", True
 
-def parse_response(cfg, payload_builder, *builder_args, verify=True, params=None):
-    data, err = get_response(cfg, payload_builder, *builder_args, verify=verify, params=params)
+def parse_response(cfg, payload_builder, *builder_args, verify=True):
+    data, err = get_response(cfg, payload_builder, *builder_args, verify=verify)
     """
     Use requests lib - Receive Response from server
     Now requires cfg as first argument.

@@ -11,7 +11,7 @@ import time
 import random
 import configparser
 
-def get_response(cfg, payload_builder, *builder_args, verify=True, params=None):
+def get_response(cfg, payload_builder, *builder_args, verify=True):
     """
     Use langchain_aws - Send Message to AWS Bedrock
     """
@@ -85,11 +85,11 @@ def get_response(cfg, payload_builder, *builder_args, verify=True, params=None):
     except Exception as e:
         return f"Error: {str(e)}", True
 
-def parse_response(cfg, payload_builder, *builder_args, verify=True, params=None):
+def parse_response(cfg, payload_builder, *builder_args, verify=True):
     """
     Use langchain_aws - Receive Response from AWS Bedrock
     """
-    data, err = get_response(cfg, payload_builder, *builder_args, verify=verify, params=params)
+    data, err = get_response(cfg, payload_builder, *builder_args, verify=verify)
     if err:
         return data, True
 

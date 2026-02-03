@@ -1,7 +1,7 @@
 {
   "projectConfig": {
     "gateway_url": "https://localhost:8443/chat/completions",
-    "nickname": "openrouter",
+    "nickname": "groq-gpt-20b",
     "parameters": {
       "max_tokens": 400,
       "temperature": 0.5,

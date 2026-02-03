@@ -1,10 +1,16 @@
 {
   "providers": {
-    "groq-fast": {
+    "groq-gpt-20b": {
       "api": "requests",
       "url": "https://api.groq.com/openai/v1/chat/completions",
       "key_path": "vg_cfg/Groq.key",
       "model": "openai/gpt-oss-20b"
+    },
+    "groq-llama8": {
+      "api": "requests",
+      "url": "https://api.groq.com/openai/v1/chat/completions",
+      "key_path": "vg_cfg/Groq.key",
+      "model": "llama-3.1-8b-instant"
     },
     "openai-gpt4": {
       "api": "langchain_openai",

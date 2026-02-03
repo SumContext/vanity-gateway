@@ -30,7 +30,7 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 import time
 import random
 
-def get_response(cfg, payload_builder, *builder_args, verify=True, params=None):
+def get_response(cfg, payload_builder, *builder_args, verify=True):
     """
     Use langchain_openai - Send Message to Server
     Orchestrates config loading, and API calls.
@@ -104,12 +104,12 @@ def get_response(cfg, payload_builder, *builder_args, verify=True, params=None):
     except Exception as e:
         return f"Error: {str(e)}", True
 
-def parse_response(cfg, payload_builder, *builder_args, verify=True, params=None):
+def parse_response(cfg, payload_builder, *builder_args, verify=True):
     """
     Use langchain_openai - Receive Response from server
     Now requires cfg as first argument.
     """
-    data, err = get_response(cfg, payload_builder, *builder_args, verify=verify, params=params)
+    data, err = get_response(cfg, payload_builder, *builder_args, verify=verify)
     if err:
         return data, True
 

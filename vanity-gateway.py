@@ -145,6 +145,12 @@ async def chat_completions(request: fastapi.Request):
                 payload[key] = False
             else:
                 payload[key] = value
+
+        # Remove keys that the upstream provider (Groq/OpenAI) won't recognize
+        payload.pop("nickname", None) 
+        # Optional: remove other custom params if they cause 400s
+        # payload.pop("include_reasoning", None)
+
         # LOGGING: See exactly what we are sending upstream
         print(f"Forwarding to: {provider.url}")
         print(f"Final Payload: {json.dumps(payload, indent=2)}")
@@ -177,6 +183,11 @@ async def chat_completions(request: fastapi.Request):
             else:
                 payload[key] = value
 
+        # Remove keys that the upstream provider (Groq/OpenAI) won't recognize
+        payload.pop("nickname", None) 
+        # Optional: remove other custom params if they cause 400s
+        # payload.pop("include_reasoning", None)
+
         logging.info("Forwarding to langchain_openai provider URL %s", provider.url)
         headers = {"Authorization": f"Bearer {provider_key}", "Content-Type": "application/json"}
         resp = requests.post(provider.url, headers=headers, json=payload, timeout=30)
@@ -200,6 +211,11 @@ async def chat_completions(request: fastapi.Request):
                 payload[key] = False
             else:
                 payload[key] = value
+
+        # Remove keys that the upstream provider (Groq/OpenAI) won't recognize
+        payload.pop("nickname", None) 
+        # Optional: remove other custom params if they cause 400s
+        # payload.pop("include_reasoning", None)
 
         logging.info("Forwarding to AWS Bedrock model %s", provider.model)
         
