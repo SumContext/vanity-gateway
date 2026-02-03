@@ -1,7 +1,15 @@
 concat.md
 test_output.log
 **/*.key
-vg_cfg/test.key
+!vg_cfg/test.key
 vg_cfg/server.key
 vg_cfg/server.crt
 secret.key
+
+# Test artifacts
+__pycache__/
+*.pyc
+.pytest_cache/
+.coverage
+htmlcov/
+*.egg-info/

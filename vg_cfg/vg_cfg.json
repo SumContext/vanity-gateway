@@ -17,6 +17,42 @@
       "url": "https://openrouter.ai/api/v1/chat/completions",
       "key_path": "vg_cfg/OpenRouter.key",
       "model": "z-ai/glm-4.5-air:free"
+    },
+    "aws-claude-sonnet": {
+      "api": "langchain_aws",
+      "key_path": "vg_cfg/aws.key",
+      "model": "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+      "region": "us-east-1"
+    },
+    "aws-claude-opus": {
+      "api": "langchain_aws",
+      "key_path": "vg_cfg/aws.key",
+      "model": "us.anthropic.claude-opus-4-5-20251101-v1:0",
+      "region": "us-east-1"
+    },
+    "aws-claude-haiku": {
+      "api": "langchain_aws",
+      "key_path": "vg_cfg/aws.key",
+      "model": "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+      "region": "us-east-1"
+    },
+    "aws-nova-pro": {
+      "api": "langchain_aws",
+      "key_path": "vg_cfg/aws.key",
+      "model": "amazon.nova-pro-v1:0",
+      "region": "us-east-1"
+    },
+    "aws-nova-lite": {
+      "api": "langchain_aws",
+      "key_path": "vg_cfg/aws.key",
+      "model": "amazon.nova-lite-v1:0",
+      "region": "us-east-1"
+    },
+    "aws-nova-micro": {
+      "api": "langchain_aws",
+      "key_path": "vg_cfg/aws.key",
+      "model": "amazon.nova-micro-v1:0",
+      "region": "us-east-1"
     }
   }
 }

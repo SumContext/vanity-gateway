@@ -181,10 +181,73 @@ async def chat_completions(request: fastapi.Request):
         headers = {"Authorization": f"Bearer {provider_key}", "Content-Type": "application/json"}
         resp = requests.post(provider.url, headers=headers, json=payload, timeout=30)
         return fastapi.responses.JSONResponse(content=resp.json(), status_code=resp.status_code)
+    
+    elif provider.api == "langchain_aws":
+        # AWS Bedrock - credentials from environment or AWS config
+        payload = await request.json()
+        payload["model"] = provider.model
+
+        for key, value in request.query_params.items():
+            if key == "nickname":
+                continue
+            if value.isdigit():
+                payload[key] = int(value)
+            elif value.replace('.', '', 1).isdigit() and '.' in value:
+                payload[key] = float(value)
+            elif value.lower() == "true":
+                payload[key] = True
+            elif value.lower() == "false":
+                payload[key] = False
+            else:
+                payload[key] = value
+
+        logging.info("Forwarding to AWS Bedrock model %s", provider.model)
+        
+        from langchain_aws import ChatBedrock
+        from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+        
+        lc_messages = []
+        role_map = {"system": SystemMessage, "user": HumanMessage, "assistant": AIMessage}
+        for msg in payload.get("messages", []):
+            role = msg.get("role")
+            content = msg.get("content")
+            if role in role_map and content:
+                lc_messages.append(role_map[role](content=content))
+        
+        llm = ChatBedrock(
+            model_id=provider.model,
+            region_name=getattr(provider, "region", "us-east-1"),
+            model_kwargs={
+                "temperature": payload.get("temperature", 0.7),
+                "max_tokens": payload.get("max_tokens", None),
+            }
+        )
+        
+        response = llm.invoke(lc_messages)
+        
+        usage = {}
+        if hasattr(response, 'response_metadata') and 'usage' in response.response_metadata:
+            usage = response.response_metadata['usage']
+        
+        response_json = {
+            "id": f"chatcmpl-{''.join([chr(random.randint(97, 122)) for _ in range(29)])}",
+            "object": "chat.completion",
+            "created": int(datetime.now(timezone.utc).timestamp()),
+            "model": provider.model,
+            "choices": [{
+                "index": 0,
+                "message": {"role": "assistant", "content": response.content},
+                "finish_reason": "stop"
+            }],
+            "usage": usage
+        }
+        
+        return fastapi.responses.JSONResponse(content=response_json, status_code=200)
 
 #https://openrouter.ai/api/v1
 
-if __name__ == "__main__":
+def main():
+    """Main entry point for the application"""
     uvicorn.run(
         "vanity-gateway:app",
         host="0.0.0.0",
@@ -192,3 +255,6 @@ if __name__ == "__main__":
         ssl_keyfile="vg_cfg/server.key",
         ssl_certfile="vg_cfg/server.crt",
     )
+
+if __name__ == "__main__":
+    main()
