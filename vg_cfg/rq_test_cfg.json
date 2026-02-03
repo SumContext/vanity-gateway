@@ -1,11 +1,11 @@
 {
   "projectConfig": {
     "gateway_url": "https://localhost:8443/chat/completions",
-    "nickname": "groq-fast",
+    "nickname": "openrouter",
     "parameters": {
-      "max_tokens": 40,
+      "max_tokens": 400,
       "temperature": 0.5,
-      "include_reasoning": false
+      "include_reasoning": true
     }
   }
 }

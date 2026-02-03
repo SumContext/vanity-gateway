@@ -11,6 +11,12 @@
       "url": "https://api.openai.com/v1",
       "key_path": "vg_cfg/openai.key",
       "model": "gpt-4o"
+    },
+    "openrouter": {
+      "api": "langchain_openai",
+      "url": "https://openrouter.ai/api/v1/chat/completions",
+      "key_path": "vg_cfg/OpenRouter.key",
+      "model": "z-ai/glm-4.5-air:free"
     }
   }
 }

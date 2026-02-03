@@ -37,6 +37,24 @@ This updated chat_completions endpoint will:
 not implemented yet:
 - load provider configuration
 
+current list
+vg_io.rqs   for requests
+
+in progress
+vg_io.oai   for langchain_openai
+
+future list
+vg_io.goog  for langchain_google_genai
+langchain_anthropic langchain_aws langchain_chroma langchain_classic 
+langchain_community langchain_core langchain_deepseek 
+langchain_experimental langchain_fireworks 
+langchain_groq langchain_huggingface langchain_mistralai 
+langchain_mongodb langchain_ollama  
+langchain_perplexity langchain_tests langchain_text_splitters 
+langchain_xai
+
+we will also act as a requests library mirror
+
 """
 
 ###################################
@@ -135,11 +153,36 @@ async def chat_completions(request: fastapi.Request):
         headers = {"Authorization": f"Bearer {provider_key}", "Content-Type": "application/json"}
         resp = requests.post(provider.url, headers=headers, json=payload, timeout=30)
         return fastapi.responses.JSONResponse(content=resp.json(), status_code=resp.status_code)
-
     
     elif provider.api == "langchain_openai":
-        # Placeholder for next iteration
-        raise fastapi.HTTPException(status_code=501, detail="Langchain API not yet implemented")
+        # Load the provider-specific key
+        with open(os.path.join(cwfd, provider.key_path), "r") as f:
+            provider_key = f.read().strip()
+
+        # Prepare payload and merge URL params (same logic as requests branch)
+        payload = await request.json()
+        payload["model"] = provider.model
+
+        for key, value in request.query_params.items():
+            if key == "nickname":
+                continue
+            if value.isdigit():
+                payload[key] = int(value)
+            elif value.replace('.', '', 1).isdigit() and '.' in value:
+                payload[key] = float(value)
+            elif value.lower() == "true":
+                payload[key] = True
+            elif value.lower() == "false":
+                payload[key] = False
+            else:
+                payload[key] = value
+
+        logging.info("Forwarding to langchain_openai provider URL %s", provider.url)
+        headers = {"Authorization": f"Bearer {provider_key}", "Content-Type": "application/json"}
+        resp = requests.post(provider.url, headers=headers, json=payload, timeout=30)
+        return fastapi.responses.JSONResponse(content=resp.json(), status_code=resp.status_code)
+
+#https://openrouter.ai/api/v1
 
 if __name__ == "__main__":
     uvicorn.run(
