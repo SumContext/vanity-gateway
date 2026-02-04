@@ -63,7 +63,8 @@ from string import Template
 import vg_io
 import fastapi
 import uvicorn
-
+import pathlib
+import argparse
 import pkgutil, importlib
 import langchain
 import pathspec
@@ -269,12 +270,80 @@ async def chat_completions(request: fastapi.Request):
 
 def main():
     """Main entry point for the application"""
+    
+    parser = argparse.ArgumentParser(
+            description= "OpenAI-compatible API gateway that routes requests to multiple LLM providers.",
+    )
+
+    parser.add_argument("--config", "-c",           required=False, type=str,   help="Path to where the certificate and key is located.")
+    parser.add_argument("--ssl-certificate-name",   required=False, type=str,   help="File name of the ssl certificate inside the config directory.")
+    parser.add_argument("--ssl-key-name",           required=False, type=str,   help="File name of the ssl key inside the config directory.")
+    parser.add_argument("--ssl-certificate-file",   required=False, type=str,   help="Path to the ssl certificate. (is skipped if config is provided)")
+    parser.add_argument("--ssl-key-file",           required=False, type=str,   help="Path to the ssl key. (is skipped if config is provided)")
+    parser.add_argument("-H", "--host",             required=False, type=str,   help="host address. (default: 0.0.0.0)")
+    parser.add_argument("-p", "--port",             required=False, type=int,   help="Port address. (default: 8443)")
+    args = vars(parser.parse_args())
+
+    # Server configuration
+    server_host = "0.0.0.0" # Default server host
+    server_port = 8443 # Default port
+
+    if provided_host:= args.get("host"):
+        server_host = provided_host
+
+    if provided_port := args.get("port"):
+        if provided_port > 65535 and provided_port < 0:
+            print("Port has to be within the range 0-65535")
+            exit(1)
+        server_port = provided_port
+    
+    # Handle ssl file name assignment
+    ssl_keyfile_name = args.get("ssl-key-name", "server.key")
+    ssl_certfile_name = args.get("ssl-certificate-name", "server.crt")
+
+    # Handle ssl files
+    ssl_keyfile: pathlib.Path
+    ssl_certfile: pathlib.Path
+
+    # Config directory
+    config_path: pathlib.Path = pathlib.Path("vg_cfg/")
+
+    if provided_config_path := args.get("config"):
+        # Verify directory exsists
+        if not pathlib.Path(provided_config_path).is_dir():
+            print("Provided config path does not exists!")
+            exit(1)
+        else:
+            config_path = provided_config_path
+
+        # Verify the files exists
+        ssl_keyfile_path = pathlib.Path(provided_config_path / ssl_keyfile_name)
+        if not ssl_keyfile_path.is_file():
+            print(f"{ssl_keyfile_name} does not exsist in provided config directory!")
+            exit(1)
+
+        ssl_certfile_path = pathlib.Path(provided_config_path / ssl_certfile_name)
+        if not ssl_certfile_path.is_file():
+            print(f"{ssl_certfile_name} does not exsist in provided config directory!")
+            exit(1)
+
+        ssl_keyfile = ssl_keyfile_path
+        ssl_certfile = ssl_certfile_path
+
+    else:
+        # Set default vaulues if non are provided
+        ssl_keyfile = pathlib.Path(config_path / ssl_keyfile_name)
+        ssl_certfile = pathlib.Path(config_path / ssl_certfile_name)
+        print(f"No key file provided. Defaulting to {str(ssl_keyfile.absolute())}")
+        print(f"No certficate file provided. Defaulting to {str(ssl_keyfile.absolute())}")
+
+
     uvicorn.run(
         "vanity-gateway:app",
-        host="0.0.0.0",
-        port=8443,
-        ssl_keyfile="vg_cfg/server.key",
-        ssl_certfile="vg_cfg/server.crt",
+        host = server_host,
+        port = server_port,
+        ssl_keyfile=str(ssl_keyfile),
+        ssl_certfile=str(ssl_certfile),
     )
 
 if __name__ == "__main__":
