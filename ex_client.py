@@ -61,7 +61,15 @@ CFG_lmstudio20b = """
 }
 """
 
+def reslv_test():
+    some_str = "\nAND ALSO STRINGS!!!"
+    test_file = cwfd + "/coconuts/TestA.md"
+    content = vg_io.reslv.re_solve(test_file)
+    print(content)
+
 def main():
+    reslv_test()
+
     some_cfg_file = os.path.join(cwfd, "vg_cfg/rq_test_cfg.json")
     some_key_path = os.path.join(cwfd, "vg_cfg/test.key")
     
