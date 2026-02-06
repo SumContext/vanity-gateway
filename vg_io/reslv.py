@@ -82,8 +82,19 @@ def re_solve(file_path):
     """
     Resolves recursive file dependencies and string variables 
     by looking at the caller's local variables.
+    File: TestA.md = `I've got a {{{path:"./TestB.md"}}}`
+    File: TestB.md =`lovely bunch of {{{path:"./TestC.md"}}}`
+    File: TestC.md =`coconuts.{{{var_str:"some_str"}}}`
+    def reslv_test():
+        some_str = "\nAND ALSO STRINGS!!!"
+        test_file = cwfd + "/coconuts/TestA.md"
+        content = vg_io.reslv.re_solve(test_file)
+        print(content)
+    reslv_test() prints
+    I've got a lovely bunch of coconuts.
+    AND ALSO STRINGS!!!
     """
-    # SURGICAL: Use inspect (already imported) to get the caller's locals
+    # Use inspect to get the caller's locals
     # This allows main() to work without passing a dict explicitly.
     caller_frame = inspect.currentframe().f_back
     context = caller_frame.f_locals
