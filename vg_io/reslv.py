@@ -26,6 +26,9 @@
 # reslv.py
 
 import os, re, types, typing, inspect, json, pydantic, jinja2
+import pathspec
+# import vg_io
+import subprocess, threading, re, os, sys, inspect, shutil, argparse, random, math, json, fnmatch, requests, json, types, smart_open
 
 def Load_Plaintxt(file_path):
     """Utility to read file content safely."""
@@ -47,36 +50,40 @@ def build_dependency_tree(file_path: str, visited: typing.Set[str] = None) -> Fi
     if visited is None:
         visited = set()
 
-    abs_path = os.path.abspath(file_path)
+    # Principle 1: Explicitly identify raw text vs file path
+    is_raw_text = "\n" in file_path or "{" in file_path or "}" in file_path
 
-    if abs_path in visited:
-        raise ValueError(f"Circular dependency detected: {file_path}")
+    if is_raw_text:
+        content = file_path
+        node = FileDependency(name="raw_input", content=content)
+        tag_pattern = r'\{\{\{path:"([^"]+)"\}\}\}'
+        dependencies = re.findall(tag_pattern, content)
+        base_dir = os.getcwd()
+    else:
+        abs_path = os.path.abspath(file_path)
+        if abs_path in visited:
+            raise ValueError(f"Circular dependency detected: {file_path}")
+        visited.add(abs_path)
 
-    visited.add(abs_path)
+        content, error = Load_Plaintxt(file_path)
+        if error:
+            # Return the error message as content so it's visible, 
+            # but don't try to find sub-dependencies in a missing file.
+            return FileDependency(name=file_path, content=content)
 
-    content, error = Load_Plaintxt(file_path)
-    if error:
-        visited.remove(abs_path)
-        return FileDependency(name=file_path, content=content)
+        node = FileDependency(name=file_path, content=content)
+        tag_pattern = r'\{\{\{path:"([^"]+)"\}\}\}'
+        dependencies = re.findall(tag_pattern, content)
+        base_dir = os.path.dirname(abs_path)
 
-    # Matches {{{path:"./SomeFile.md"}}}
-    tag_pattern = r'\{\{\{path:"([^"]+)"\}\}\}'
-    dependencies = re.findall(tag_pattern, content)
-
-    node = FileDependency(name=file_path, content=content)
-
+    # Resolve subtrees
     for dep_path in dependencies:
-        resolved_path = os.path.abspath(os.path.join(os.path.dirname(abs_path), dep_path))
+        resolved_path = os.path.abspath(os.path.join(base_dir, dep_path))
         child_node = build_dependency_tree(resolved_path, visited.copy())
-
-        # Store the raw tag EXACTLY as it appeared in the file
         child_node.raw_tag = f'{{{{{{path:"{dep_path}"}}}}}}'
-
         node.subtrees.append(child_node)
 
-    # print("FOUND DEPENDENCIES:", dependencies)
     return node
-
 
 def re_solve(file_path):
     """
@@ -95,15 +102,15 @@ def re_solve(file_path):
     AND ALSO STRINGS!!!
     """
     # Use inspect to get the caller's locals
-    # This allows main() to work without passing a dict explicitly.
     caller_frame = inspect.currentframe().f_back
     context = caller_frame.f_locals
 
     try:
         tree = build_dependency_tree(file_path)
     except Exception as e:
-        print(f"Failed to build dependency tree: {e}")
-        return
+        # Only print error if it's an actual crash, 
+        # not a "file not found" handled inside the tree.
+        return f"Resolution Error: {e}"
 
     def resolve_node(node):
         text = node.content
@@ -117,7 +124,7 @@ def re_solve(file_path):
         var_pattern = r'\{\{\{var_str:"([^"]+)"\}\}\}'
         for var_name in re.findall(var_pattern, text):
             raw_tag = f'{{{{{{var_str:"{var_name}"}}}}}}'
-            # Pull from the captured context; default to the tag if not found
+            # Pull from the captured context
             replacement = str(context.get(var_name, raw_tag))
             text = text.replace(raw_tag, replacement)
             

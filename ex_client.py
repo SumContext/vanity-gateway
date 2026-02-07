@@ -68,46 +68,40 @@ def reslv_test():
     print(content)
 
 def main():
-    reslv_test()
-
-    some_cfg_file = os.path.join(cwfd, "vg_cfg/rq_test_cfg.json")
-    some_key_path = os.path.join(cwfd, "vg_cfg/test.key")
+    # reslv_test()
+    # ^^prompt builder engine^^
     
-    # set a cfg with load_from_file or inline_set
-    # cfg = vg_io.cfg.load_from_file(some_cfg_file, some_key_path)
-    # cfg = vg_io.cfg.inline_set(CFG_groq_gpt20b, some_key_path)
-    cfg = vg_io.cfg.inline_set(CFG_lmstudio20b, some_key_path)
+    # manage connection vars here
+    cert = os.path.join(cwfd, "vg_cfg/server.crt")
+    some_key_path = os.path.join(cwfd, "vg_cfg/test.key")
+
+    # set a cfg with inline_set
+    cfg1 = vg_io.cfg.inline_set(CFG_groq_gpt20b, some_key_path)
+    cfg2 = vg_io.cfg.inline_set(CFG_lmstudio20b, some_key_path)
+    # set a cfg with load_from_file
+    cfg3 = vg_io.cfg.load_from_file(os.path.join(cwfd, "vg_cfg/rq_test_cfg.json"), some_key_path)
 
     # runs test_prompt builder
-    cert = os.path.join(cwfd, "vg_cfg/server.crt")
     content, err = vg_io.rqs.parse_response(cfg, test_prompt, verify=cert)
-
     print(content)
 
 
 def test_prompt(cfg, *builder_args):
-    # max_size = cfg.projectConfig.maxSupportedFileSize
-    # # file_path = builder_args[0]
-    # try:
-    #     # if os.path.getsize(file_path) > max_size:
-    #     #     return "(skipped: file too large)", True
-    # except Exception as e:
-    #     return f"File size check failed: {str(e)}", True
-    # # code_content, err = Load_Plaintxt(file_path)
-    # if err:
-    #     return code_content, True
-    # extra_context = builder_args[0] if builder_args else "large project"
-    # prompt = "Provide a markdown code escaped 111 chars or less summary of this file."
-    payload = {
-        "model": cfg.projectConfig.nickname,
-        "include_reasoning": True,
+    nick_str = cfg.projectConfig.nickname
+    msg = """
+    {
+        "model": "{{{var_str:"nick_str"}}}",
+        "include_reasoning": true,
         "messages": [
             {"role": "user",
             "content": "Who is the 1st President of the United States?"}
         ]
     }
+    """
+    payload_str = vg_io.reslv.re_solve(msg)
+    # print(payload_str)
+    payload = json.loads(payload_str)
     return payload, False
 
 if __name__ == "__main__":
     main()
-
