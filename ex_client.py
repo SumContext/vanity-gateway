@@ -81,8 +81,9 @@ def main():
     # set a cfg with load_from_file
     cfg3 = vg_io.cfg.load_from_file(os.path.join(cwfd, "vg_cfg/rq_test_cfg.json"), some_key_path)
 
+    #fire up LMstudio hosting GPT-20b for cfg2 to connect to
     # runs test_prompt builder
-    content, err = vg_io.rqs.parse_response(cfg, test_prompt, verify=cert)
+    content, err = vg_io.rqs.parse_response(cfg2, test_prompt, verify=cert)
     print(content)
 
 
