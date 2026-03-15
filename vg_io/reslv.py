@@ -30,6 +30,15 @@ import pathspec
 # import vg_io
 import subprocess, threading, re, os, sys, inspect, shutil, argparse, random, math, json, fnmatch, requests, json, types, smart_open
 
+def str2file(text, file_path):
+    """Utility to write string content safely."""
+    try:
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write(text)
+        return f"Successfully wrote to {file_path}", False
+    except Exception as e:
+        return f"Error writing file: {str(e)}", True
+
 def Load_Plaintxt(file_path):
     """Utility to read file content safely."""
     if not os.path.exists(file_path):

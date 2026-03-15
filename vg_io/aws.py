@@ -24,6 +24,9 @@
 
 # vanity-gateway/vg_io/aws.py
 
+# get list of models at:
+# https://ai.azure.com/catalog/models
+
 import json, types, os
 from langchain_aws import ChatBedrock
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage

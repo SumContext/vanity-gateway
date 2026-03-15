@@ -1,0 +1,1 @@
+coconuts.{{{var_str:"some_str"}}}
