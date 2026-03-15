@@ -94,7 +94,7 @@ def build_dependency_tree(file_path: str, visited: typing.Set[str] = None) -> Fi
 
     return node
 
-def re_solve(file_path):
+def re_solve(file_path, context=None):
     """
     Resolves recursive file dependencies and string variables 
     by looking at the caller's local variables.
@@ -111,8 +111,9 @@ def re_solve(file_path):
     AND ALSO STRINGS!!!
     """
     # Use inspect to get the caller's locals
-    caller_frame = inspect.currentframe().f_back
-    context = caller_frame.f_locals
+    if context is None:
+        caller_frame = inspect.currentframe().f_back
+        context = caller_frame.f_locals
 
     try:
         tree = build_dependency_tree(file_path)
@@ -140,3 +141,88 @@ def re_solve(file_path):
         return text
 
     return resolve_node(tree)
+
+def sws_re_solve(file_path):
+    """
+    reads a csv of files
+    for each file in the csv look for a matching ("file".sws) file if it is there
+    run str2file(re_solve(file.sws), file) on the sws file if it exists
+    this should read ./sws/sws.csv see "./sws/coconuts/TestA.md.sws" to
+    provide ./sws/coconuts/TestA.md and overwrite it if it already exists
+    """
+    # Load CSV list
+    csv_content, err = Load_Plaintxt(file_path)
+    if err:
+        print(csv_content)
+        return
+
+    lines = [l.strip() for l in csv_content.splitlines() if l.strip()]
+    base_dir = os.path.dirname(file_path)
+
+    for rel_path in lines:
+        # Absolute path to target file (e.g., ./sws/coconuts/TestA.md)
+        target_path = os.path.abspath(os.path.join(base_dir, rel_path))
+
+        # The .sws source file (e.g., ./sws/coconuts/TestA.md.sws)
+        sws_path = target_path + ".sws"
+
+        if not os.path.exists(sws_path):
+            # No .sws file → skip silently
+            continue
+
+        # Resolve content
+        # resolved = re_solve(sws_path)
+        resolved = re_solve(sws_path, context=caller_frame.f_locals)
+
+        # Write output to the target file (overwrite if exists)
+        msg, err = str2file(resolved, target_path)
+        if err:
+            print(msg)
+
+def sws_re_solve_json(json_path, context=None):
+#def sws_re_solve_json(json_path):
+    """
+    Reads a sws.json file shaped like:
+        { "files": ["./coconuts/TestA.md", ...] }
+
+    For each file entry:
+        - Look for "<file>.sws"
+        - If present, resolve it with re_solve()
+        - Store the resolved output in a new JSON file:
+              sws.resolved.json
+    Does NOT overwrite any .md files. This is a safe test mode.
+    """
+
+    # Load JSON
+    content, err = Load_Plaintxt(json_path)
+    if err:
+        print(content)
+        return
+
+    try:
+        data = json.loads(content)
+    except Exception as e:
+        print(f"JSON parse error: {e}")
+        return
+
+    if "files" not in data or not isinstance(data["files"], list):
+        print("Error: sws.json must contain a 'files' list.")
+        return
+
+    base_dir = os.path.dirname(json_path)
+    results = {}
+
+    for rel_path in data["files"]:
+        target_path = os.path.abspath(os.path.join(base_dir, rel_path))
+        sws_path = target_path + ".sws"
+
+        if not os.path.exists(sws_path):
+            # No .sws file → skip silently
+            continue
+
+        # resolved = re_solve(sws_path)
+        resolved = re_solve(sws_path, context=context)
+
+        msg, err = str2file(resolved, target_path)
+        if err:
+            print(msg)

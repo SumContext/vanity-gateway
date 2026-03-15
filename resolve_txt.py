@@ -34,14 +34,28 @@ rows, columns = os.popen('stty size', 'r').read().split() #http://goo.gl/cD4CFf
 cwf = os.path.abspath(inspect.getfile(inspect.currentframe())) # Current Working File
 cwfd = os.path.dirname(cwf) # Current Working File Path
 
-def reslv_test():
-    some_str = "\nAND ALSO STRINGS!!!"
-    test_file = cwfd + "/coconuts/TestA.md"
-    content = vg_io.reslv.re_solve(test_file)
-    print(content)
+# def reslv_test():
+#     some_str = "\nAND ALSO STRINGS!!!"
+#     test_file = cwfd + "/coconuts/TestA.md"
+#     content = vg_io.reslv.re_solve(test_file)
+#     print(content)
 
-def main():
-    reslv_test()
+def sws_test():
+    some_str = "\nAND ALSO STRINGS!!!"
+    vg_io.reslv.sws_re_solve_json(cwfd + "/sws/sws.json")
+
+def sws_test_w_vars():
+    some_str = "\nAND ALSO STRINGS!!!"
+    # ctx = locals()
+    # vg_io.reslv.sws_re_solve_json(cwfd + "/sws/sws.json", context=ctx)
+    vg_io.reslv.sws_re_solve_json(cwfd + "/sws/sws.json", context=locals())
+
+def main( ):
+    # tst_coconuts()
+    # tst_json()
+    # sws_test() # safer
+    sws_test_w_vars()
+    # reslv_test()
 
 if __name__ == "__main__":
     main()
