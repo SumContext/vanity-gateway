@@ -3,6 +3,39 @@
 
 OpenAI-compatible API gateway that routes requests to multiple LLM providers.
 
+## Setup
+
+### create certs
+```bash
+cd ~/sync
+git clone git@github.com:SumContext/vanity-gateway.git
+cd ~/sync/vanity-gateway/
+./create_certs.sh 
+```
+
+### startup server after you edit /vanity-gateway/vg_cfg/vg_cfg.json
+```bash
+cd ~/sync/vanity-gateway/ && nix develop
+./vanity-gateway.py &
+
+INFO:     Started server process [9535]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on https://0.0.0.0:8443 (Press CTRL+C to quit)
+```
+
+and in a different terminal
+
+```bash
+cd ~/sync/vanity-gateway/ && nix develop
+./ex_client.py 
+
+The first President of the United States was **George Washington**. He served from 1789 to 1797.
+```
+
+read [`ex_client.py`](/ex_client.py) example
+Server runs on `https://0.0.0.0:8443`
+
 ## Supported Providers
 
 - **requests** - Direct HTTP to OpenAI-compatible APIs (Groq, etc.)
@@ -63,35 +96,6 @@ aws bedrock list-foundation-models --region us-east-1
 aws bedrock list-inference-profiles --region us-east-1
 ```
 
-## Setup
-
-```bash
-cd ~/sync
-git clone git@github.com:SumContext/vanity-gateway.git
-cd ~/sync/vanity-gateway/
-./create_certs.sh 
-
-cd ~/sync/vanity-gateway/
-nix develop
-./vanity-gateway.py
-INFO:     Started server process [9535]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-INFO:     Uvicorn running on https://0.0.0.0:8443 (Press CTRL+C to quit)
-
-```
-
-and in a different terminal
-
-```bash
-cd ~/sync/vanity-gateway/
-nix develop
-./ex_client.py 
-The first President of the United States was **George Washington**. He served from 1789 to 1797.
-```
-
-read [`ex_client.py`](/ex_client.py) example
-Server runs on `https://0.0.0.0:8443`
 
 ## Usage
 
